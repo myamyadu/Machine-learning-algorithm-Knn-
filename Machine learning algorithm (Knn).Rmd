@@ -1,0 +1,160 @@
+
+# Develop the diagnostic machine learning algorithm (Knn) to assist the medical  team in determining whether the tumor is malignant or not. Provide a detailed explanation of the output.
+# Explore and prepare data by using the str() function. Display the probability of the attributes (‘benign’ and ‘malignant’) of the variable named “diagnosis” that we plan to use for prediction.
+
+After analyzing data using str()function. We removed unnecessary column (id) and converted target variable "diagnosis" to factor. 
+```{r}
+# Read the data stored in R in file
+wbcd <- read.csv("wisc_bc_data.csv")
+```
+
+```{r}
+# Explore the data using str() function
+str(wbcd)
+```
+
+```{r}
+# Remove irreverent column
+wbcd <- wbcd[-1]
+```
+
+```{r}
+# Convert target variable to factor
+wbcd$diagnosis <- factor(wbcd$diagnosis)
+```
+
+```{r}
+# Explore diagnosis variable
+table(wbcd$diagnosis)
+```
+
+```{r}
+# The probability of the attributes (‘benign’ and ‘malignant’) of the variable named “diagnosis” that we plan to use for prediction
+round(prop.table(table(wbcd$diagnosis))*100,digits = 1)
+```
+
+```{r}
+# Explore the data using str() function after changing target value from character to factor
+str(wbcd)
+```
+# Create datasets for training and testing the model, and develop the model using the knn classifier algorithm. Evaluate the model with different k, and propose the best value of k. 
+
+```{r}
+# Normalize the data
+normalize <- function(x){return((x-min(x))/(max(x)-min(x)))}
+```
+
+```{r}
+# In normalization no need to include target variable because we'll measure this as categorical variable.Thus, we normalize the data and stored as data frame.
+wbcd_n <- as.data.frame(lapply(wbcd[2:31],normalize))
+str(wbcd_n)
+```
+
+```{r}
+# Include target variable in normalization using cbind function
+wbcd_n <- cbind(wbcd_n, wbcd[1])
+str(wbcd_n)
+```
+
+# Partition the dataset into training and testing into 7:3.
+
+```{r}
+# Import library for partition
+library(caret)
+set.seed(123)
+```
+
+```{r}
+# Partition the data with the 7:3 ratio: p=.7 or 70% for training data and 30% for testing data.
+partition <- createDataPartition(wbcd_n$diagnosis,p=0.7, list=FALSE)
+train.df <- wbcd_n[partition,]
+test.df <- wbcd_n[-partition,]
+```
+
+# Develop the model using the knn classifier algorithm. 
+
+```{r}
+# Include target variable from the data and assigned it to the variable named trainLables and tarugetLables to compare the outcome from the analysis.
+trainLabels <- wbcd_n[partition,31]
+testLabels <- wbcd_n[-partition,31]
+```
+
+```{r}
+# Import library
+library(class)
+# Drop the target variable
+train.df.1 <- train.df[,-31]
+str(train.df.1)
+str(train.df[,31])
+test.df.1 <- test.df[,-31]
+```
+
+```{r}
+# Model using the knn classifier algorithm where k =4
+wbcd_n_pred <- knn(train.df.1,test.df.1,cl=trainLabels,k=4)
+summary(wbcd_n_pred)
+```
+# Find best k for different knn model
+
+```{r}
+# Run k by 25 times to find best k.
+accuracy.df <- data.frame(k=seq(1,25,1), accuracy=rep(0,25))
+
+# Import library
+library(e1071)
+# Run knn function 25 times
+# Computer knn for different k fo validation
+for (i in 1:25) {
+  knn.pred <- knn(train.df.1[,1:30], test.df.1[,1:30],
+                  cl=(train.df[,31]),k=i)
+  accuracy.df[i,2] <- confusionMatrix(knn.pred,test.df[,31])$overall[1]
+}
+```
+
+```{r}
+# View the accuracy of df
+View(accuracy.df)
+```
+
+# Evaluate the performance of knn analysis
+
+```{r}
+# Import library
+library(gmodels)
+library(caret)
+```
+
+From evaluation we can see that, the Knn model best when k= 4 showing accuracy level .9706.
+
+```{r}
+# Evaluate the performance of analysis when k= 4
+wbcd_n_pred <- knn(train.df.1,test.df.1,cl=trainLabels,k=4)
+summary(wbcd_n_pred)
+confusionMatrix(testLabels,wbcd_n_pred)
+```
+
+```{r}
+# Evaluate the performance of analysis when k= 11 for comparison
+wbcd_n_pred <- knn(train.df.1,test.df.1,cl=trainLabels,k=11)
+summary(wbcd_n_pred)
+confusionMatrix(testLabels,wbcd_n_pred)
+```
+The knn model (k=4) provides an accuracy rate of 0.9706.In knn analysis, out of the actual 107 benign cancers, 106 were correctly classified as benign, and 1 was miss classified as malignant. Out of the actual 63 malignant cancers, 5 were incorrectly classified as benign, and 58 were accurately classified as malignant.
+
+Here's a breakdown:
+
+For benign cancer:
+
+True Positive (TP): 106
+False Negative (FN): 1
+For malignant cancer:
+
+False Positive (FP): 5
+True Negative (TN): 58
+So, to summarize:
+
+106 benign cancers were correctly classified as benign.
+1 benign cancer was incorrectly classified as malignant.
+58 malignant cancers were correctly classified as malignant.
+5 malignant cancers were incorrectly classified as benign.
+
